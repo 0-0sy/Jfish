@@ -50,19 +50,21 @@ private:
   double x_min_; 
   double x_max_;
   double y_fixed_;
+  double yaw_min_;
+  double yaw_max_;
   double z_min_;
   double z_max_;
 
   const Eigen::Vector3d heading_fixed_ = Eigen::Vector3d(0.0, 0.0, 1.0); // only z-up
 
   // Latest Joint values
-  double th1_ = 0.0;       // [rad]
+  double th1_ = 0.0;        // [rad]
   double th2_ = 0.84522;    // [rad]
   double th3_ = -1.50944;   // [rad]
-  double th4_ = 0.90812; // [rad]
-  double th5_ = 0.0;       // [rad]
+  double th4_ = 0.90812;    // [rad]
+  double th5_ = 0.0;        // [rad]
 
-  Eigen::VectorXd a1_q, a2_q, a3_q, a4_q;
+  std::array<double, 5> a1_q, a2_q, a3_q, a4_q;
 
   // heartbeat state  
   uint8_t  hb_state_;     // current heartbeat value

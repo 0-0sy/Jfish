@@ -8,7 +8,8 @@ DynamixelNode::DynamixelNode(const std::string &device_name): Node("dynamixel_no
     portHandler_(nullptr),
     packetHandler_(nullptr),
     groupSyncWrite_(nullptr),
-    groupSyncRead_(nullptr)
+    groupSyncRead_(nullptr),
+    last_pub_time_(std::chrono::steady_clock::now()) 
 {
   // Create ROS2 subscriber for joint values
   joint_val_subscriber_ = this->create_subscription<dynamixel_interfaces::msg::JointVal>("joint_cmd", 1, std::bind(&DynamixelNode::armchanger_callback, this, std::placeholders::_1));
@@ -169,6 +170,13 @@ void DynamixelNode::Dynamixel_Write_Read() {
     msg.a3_mea[j] = arm_mea[2][j];
     msg.a4_mea[j] = arm_mea[3][j];
   }
+
+  auto now = std::chrono::steady_clock::now();
+  double dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_pub_time_).count();
+  last_pub_time_ = now;
+
+  RCLCPP_INFO(this->get_logger(), "Publishing /joint_mea at %.2f Hz", 1.0 / dt);
+
   pos_mea_publisher_->publish(msg);
 }
 
@@ -177,23 +185,43 @@ bool DynamixelNode::init_Dynamixel() {
 
   for (size_t i = 0; i < ARM_NUM; ++i) {
     for (size_t j = 0; j < 5; ++j) {
-        uint8_t id = DXL_IDS[i][j];
-        if (packetHandler_->write1ByteTxRx(portHandler_, id, ADDR_OPERATING_MODE, 3, &dxl_error) != COMM_SUCCESS){
+      uint8_t id = DXL_IDS[i][j];
+
+      // Set operating mode
+      if (packetHandler_->write1ByteTxRx(portHandler_, id, ADDR_OPERATING_MODE, 3, &dxl_error) != COMM_SUCCESS){
         std::cerr << "Failed to set operating mode for motor ID " << static_cast<int>(id) << std::endl;
         return false;
       }
+
+      // Enable torque
       if (packetHandler_->write1ByteTxRx(portHandler_, id, ADDR_TORQUE_ENABLE, 1, &dxl_error) != COMM_SUCCESS){
         std::cerr << "Failed to enable torque for motor ID " << static_cast<int>(id) << std::endl;
         return false;
       }
+
+      // Set PID gains
+      if (j == 0) { // J1
+        change_position_gain(id, 800, 0, 0);
+        change_velocity_gain(id, 100, 20);
+      }
+      else if (j == 1) { // J2
+        change_position_gain(id, 2562, 1348, 809);
+        change_velocity_gain(id, 1079, 3843);
+      }
+      else if (j == 2) { // J3
+        change_position_gain(id, 3910, 1341, 3843);
+        change_velocity_gain(id, 1314, 9102);
+      }
+      else if (j == 3) { // J4
+        change_position_gain(id, 2700, 390, 1238);
+        change_velocity_gain(id, 2023, 2023);
+      }
+      else if (j == 4) { // J5
+        change_position_gain(id, 700, 0, 0);
+        change_velocity_gain(id, 100, 1920);
+      }
     }
   }
-
-  // Set PID gains
-  change_position_gain(1, 100, 30, 0);
-  change_velocity_gain(1, 100, 20);
-  change_position_gain(2, 2500, 270, 0);
-  change_velocity_gain(2, 2100, 220);
 
   groupSyncWrite_ = new GroupSyncWrite(portHandler_, packetHandler_, ADDR_GOAL_POSITION, 4);
   groupSyncRead_  = new GroupSyncRead(portHandler_, packetHandler_, ADDR_PRESENT_POSITION, 4);

@@ -40,7 +40,7 @@ constexpr std::array<std::array<uint8_t, 5>, 4> DXL_IDS = {{
 }};
 
 constexpr double PI = 3.1415926535897932384626433832706;
-constexpr double rad2ppr_J1 = 6.25 * 2048.0 / PI;
+constexpr double rad2ppr_J1 = 8 * 2048.0 / PI;
 constexpr double ppr2rad_J1 = PI / 2048.0 / 6.25;
 constexpr double rad2ppr = 2048.0 / PI;
 constexpr double ppr2rad = PI / 2048.0;
@@ -75,6 +75,8 @@ private:
   dynamixel::PacketHandler* packetHandler_;
   dynamixel::GroupSyncWrite* groupSyncWrite_;
   dynamixel::GroupSyncRead*  groupSyncRead_;
+
+  std::chrono::steady_clock::time_point last_pub_time_;
 
   // arm changer sub
   double arm_des_rad[4][5] = { // [rad]

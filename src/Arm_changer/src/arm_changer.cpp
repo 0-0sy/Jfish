@@ -27,9 +27,11 @@ ArmChangerWorker::ArmChangerWorker(): Node("arm_changing_node") {
   // workspace constrain
   x_min_ = -270.; 
   x_max_ = -330.;
+  yaw_min_ = -0.7854;
+  yaw_max_ = 0.7854;
+  y_fixed_ = 0.; 
   z_min_ = 50.;
   z_max_ = 220.;
-  y_fixed_ = 0.; // y-coord is fixed.
 
   // initial handshake: immediately send 42 and enable subsequent heartbeat
   hb_state_   = 42;
@@ -39,6 +41,7 @@ ArmChangerWorker::ArmChangerWorker(): Node("arm_changing_node") {
 void ArmChangerWorker::sbus_callback(const sbus_interfaces::msg::SbusSignal::SharedPtr msg) {
   double x = map_value(static_cast<double>(msg->ch[10]), 352, 1696, x_min_, x_max_);
   double z = map_value(static_cast<double>(msg->ch[11]), 352, 1696, z_min_, z_max_);
+  th1_ = map_value(static_cast<double>(msg->ch[1]), 352, 1696, yaw_min_, yaw_max_);
 
   // RCLCPP_INFO(this->get_logger(), "x: %.2f, z: %.2f", x, z);
   compute_ik(x, y_fixed_, z, heading_fixed_);
@@ -49,12 +52,13 @@ void ArmChangerWorker::killCmd_callback(const sbus_interfaces::msg::KillCmd::Sha
   // RCLCPP_INFO(this->get_logger(), "kill_activated_: %s", kill_activated_ ? "true" : "false");
 }
 
+
 void ArmChangerWorker::compute_ik(const double x, const double y, const double z, const Eigen::Vector3d &heading){
   Eigen::Vector3d position(x, y, z);
   Eigen::Vector3d p05 = position;
   Eigen::Vector3d p04 = p05 - a5_ * heading;
 
-  th1_ = -std::atan2(p04(0), p04(1)) - PI / 2;
+  double th1_ = -std::atan2(p04(0), p04(1)) - PI / 2;
 
   double n = p04(1) * heading(0) - p04(0) * heading(1);
   th5_ = std::acos(std::abs(n) / std::sqrt(std::pow(p04(1), 2) + std::pow(p04(0), 2)));
@@ -102,6 +106,8 @@ void ArmChangerWorker::joint_callback() {
   joint_msg.a2_des = {th1_, th2_, th3_, th4_, th5_};
   joint_msg.a3_des = {th1_, th2_, th3_, th4_, th5_};
   joint_msg.a4_des = {th1_, th2_, th3_, th4_, th5_};
+
+  RCLCPP_INFO(this->get_logger(), "%.2f, %.2f, %.2f, %.2f, %.2f", th1_, th2_, th3_, th4_, th5_);
 
   joint_publisher_->publish(joint_msg);
 }
