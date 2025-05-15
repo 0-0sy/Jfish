@@ -178,9 +178,9 @@ void DynamixelNode::Dynamixel_Write_Read() {
     msg.a4_mea[j] = arm_mea[3][j];
   }
 
-  auto now = std::chrono::steady_clock::now();
-  double dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_pub_time_).count();
-  last_pub_time_ = now;
+  // auto now = std::chrono::steady_clock::now();
+  // double dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_pub_time_).count();
+  // last_pub_time_ = now;
 
   // RCLCPP_INFO(this->get_logger(), "Publishing /joint_mea at %.2f Hz", 1.0 / dt);
 
@@ -195,7 +195,8 @@ bool DynamixelNode::init_Dynamixel() {
       uint8_t id = DXL_IDS[i][j];
 
       // Set operating mode
-      if (packetHandler_->write1ByteTxRx(portHandler_, id, ADDR_OPERATING_MODE, 3, &dxl_error) != COMM_SUCCESS){
+      uint8_t mode = (j == 0) ? 4 : 3;  // J1 - Extended Position & Jn - Position
+      if (packetHandler_->write1ByteTxRx(portHandler_, id, ADDR_OPERATING_MODE, mode, &dxl_error) != COMM_SUCCESS){
         std::cerr << "Failed to set operating mode for motor ID " << static_cast<int>(id) << std::endl;
         return false;
       }
