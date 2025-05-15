@@ -23,8 +23,8 @@
 #define ADDR_POSITION_P_GAIN     84
 #define ADDR_POSITION_I_GAIN     82
 #define ADDR_POSITION_D_GAIN     80
-#define ADDR_VELOCITY_P_GAIN      78
-#define ADDR_VELOCITY_I_GAIN      76
+#define ADDR_VELOCITY_P_GAIN     78
+#define ADDR_VELOCITY_I_GAIN     76
 
 #define PROTOCOL_VERSION 2.0
 #define BAUDRATE         4000000

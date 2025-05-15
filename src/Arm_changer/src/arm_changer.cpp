@@ -20,8 +20,8 @@ ArmChangerWorker::ArmChangerWorker(): Node("arm_changing_node") {
   heartbeat_timer_ = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&ArmChangerWorker::heartbeat_timer_callback, this));
 
   // workspace constrain
-  x_min_ = -270.; 
-  x_max_ = -330.;
+  x_min_ = 270.; 
+  x_max_ = 330.;
   yaw_min_ = -0.7854;
   yaw_max_ = 0.7854;
   y_fixed_ = 0.; 
