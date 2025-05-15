@@ -113,16 +113,23 @@ void DynamixelNode::mujoco_callback(const mujoco_interfaces::msg::MuJoCoMeas::Sh
 /* for real */
 void DynamixelNode::Dynamixel_Write_Read() {
   /*  Write  */
+  const double f_param = 0.2;
   groupSyncWrite_->clearParam();
   
   for (size_t i = 0; i < ARM_NUM; ++i) {
     for (size_t j = 0; j < 5; ++j) {
+      // Apply LPF in PPR domain
+      filtered_des_ppr[i][j] = static_cast<int>(
+        f_param * arm_des_ppr[i][j] + (1.0 - f_param) * filtered_des_ppr[i][j]
+      );
+  
       uint8_t param_goal_position[4] = {
-        DXL_LOBYTE(DXL_LOWORD(arm_des_ppr[i][j])),
-        DXL_HIBYTE(DXL_LOWORD(arm_des_ppr[i][j])),
-        DXL_LOBYTE(DXL_HIWORD(arm_des_ppr[i][j])),
-        DXL_HIBYTE(DXL_HIWORD(arm_des_ppr[i][j]))
+        DXL_LOBYTE(DXL_LOWORD(filtered_des_ppr[i][j])),
+        DXL_HIBYTE(DXL_LOWORD(filtered_des_ppr[i][j])),
+        DXL_LOBYTE(DXL_HIWORD(filtered_des_ppr[i][j])),
+        DXL_HIBYTE(DXL_HIWORD(filtered_des_ppr[i][j]))
       };
+  
       if (!groupSyncWrite_->addParam(DXL_IDS[i][j], param_goal_position)) {
         dnmxl_err_cnt_++;
       }
@@ -175,7 +182,7 @@ void DynamixelNode::Dynamixel_Write_Read() {
   double dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_pub_time_).count();
   last_pub_time_ = now;
 
-  RCLCPP_INFO(this->get_logger(), "Publishing /joint_mea at %.2f Hz", 1.0 / dt);
+  // RCLCPP_INFO(this->get_logger(), "Publishing /joint_mea at %.2f Hz", 1.0 / dt);
 
   pos_mea_publisher_->publish(msg);
 }
@@ -209,7 +216,7 @@ bool DynamixelNode::init_Dynamixel() {
         change_velocity_gain(id, 1079, 3843);
       }
       else if (j == 2) { // J3
-        change_position_gain(id, 3910, 1341, 3843);
+        change_position_gain(id, 2500, 1341, 3843);
         change_velocity_gain(id, 1314, 9102);
       }
       else if (j == 3) { // J4
@@ -245,18 +252,10 @@ void DynamixelNode::change_velocity_gain(uint8_t dxl_id, uint16_t p_gain, uint16
 void DynamixelNode::armchanger_callback(const dynamixel_interfaces::msg::JointVal::SharedPtr msg) {
 
   for (uint8_t i = 0; i < 5; ++i) {
-    if (i != 3){
-      arm_des_rad[0][i] = -msg->a1_des[i];  // Arm 1
-      arm_des_rad[1][i] = -msg->a2_des[i];  // Arm 2
-      arm_des_rad[2][i] = -msg->a3_des[i];  // Arm 3
-      arm_des_rad[3][i] = -msg->a4_des[i];  // Arm 4
-    }
-    else{
-      arm_des_rad[0][i] = msg->a1_des[i];   // Arm 1
-      arm_des_rad[1][i] = msg->a2_des[i];   // Arm 2
-      arm_des_rad[2][i] = msg->a3_des[i];   // Arm 3
-      arm_des_rad[3][i] = msg->a4_des[i];   // Arm 4
-    }
+    arm_des_rad[0][i] = msg->a1_des[i];   // Arm 1
+    arm_des_rad[1][i] = msg->a2_des[i];   // Arm 2
+    arm_des_rad[2][i] = msg->a3_des[i];   // Arm 3
+    arm_des_rad[3][i] = msg->a4_des[i];   // Arm 4
   }
 
   arm_des_ppr[0][0] = msg->a1_des[0] * rad2ppr_J1 + 2048.0;  // Arm 1
@@ -265,12 +264,21 @@ void DynamixelNode::armchanger_callback(const dynamixel_interfaces::msg::JointVa
   arm_des_ppr[3][0] = msg->a4_des[0] * rad2ppr_J1 + 2048.0;  // Arm 4
     
   for (uint8_t i = 1; i < 5; ++i) {
-    arm_des_ppr[0][i] = msg->a1_des[i] * rad2ppr + 2048.0;   // Arm 1
-    arm_des_ppr[1][i] = msg->a2_des[i] * rad2ppr + 2048.0;   // Arm 2
-    arm_des_ppr[2][i] = msg->a3_des[i] * rad2ppr + 2048.0;   // Arm 3
-    arm_des_ppr[3][i] = msg->a4_des[i] * rad2ppr + 2048.0;   // Arm 4
+    if (i == 3){
+      arm_des_ppr[0][i] = msg->a1_des[i] * rad2ppr + 2048.0;  // Arm 1
+      arm_des_ppr[1][i] = msg->a2_des[i] * rad2ppr + 2048.0;  // Arm 2
+      arm_des_ppr[2][i] = msg->a3_des[i] * rad2ppr + 2048.0;  // Arm 3
+      arm_des_ppr[3][i] = msg->a4_des[i] * rad2ppr + 2048.0;  // Arm 4
+    }
+    else {
+      arm_des_ppr[0][i] = -msg->a1_des[i] * rad2ppr + 2048.0;   // Arm 1
+      arm_des_ppr[1][i] = -msg->a2_des[i] * rad2ppr + 2048.0;   // Arm 2
+      arm_des_ppr[2][i] = -msg->a3_des[i] * rad2ppr + 2048.0;   // Arm 3
+      arm_des_ppr[3][i] = -msg->a4_des[i] * rad2ppr + 2048.0;   // Arm 4
+    }
   }
 }
+
 
 void DynamixelNode::heartbeat_timer_callback() {
   // gate until handshake done

@@ -101,6 +101,13 @@ private:
     {0., -0.84522, 1.50944, 0.90812, 0.}
   };
 
+  double filtered_des_ppr[4][5] = { // [rad]
+    {0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0}
+  };
+
   uint16_t dnmxl_err_cnt_ = 0;
   
   // heartbeat state  
