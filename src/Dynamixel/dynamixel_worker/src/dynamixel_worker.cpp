@@ -113,14 +113,13 @@ void DynamixelNode::mujoco_callback(const mujoco_interfaces::msg::MuJoCoMeas::Sh
 /* for real */
 void DynamixelNode::Dynamixel_Write_Read() {
   /*  Write  */
-  const double f_param = 0.2;
   groupSyncWrite_->clearParam();
   
   for (size_t i = 0; i < ARM_NUM; ++i) {
     for (size_t j = 0; j < 5; ++j) {
       // Apply LPF in PPR domain
       filtered_des_ppr[i][j] = static_cast<int>(
-        f_param * arm_des_ppr[i][j] + (1.0 - f_param) * filtered_des_ppr[i][j]
+        0.2 * arm_des_ppr[i][j] + 0.8 * filtered_des_ppr[i][j]
       );
   
       uint8_t param_goal_position[4] = {

@@ -30,7 +30,7 @@
 #define BAUDRATE         4000000
 #define DEVICE_NAME      "/dev/ttyUSB1"
 
-#define ARM_NUM 1
+#define ARM_NUM 4
 
 constexpr std::array<std::array<uint8_t, 5>, 4> DXL_IDS = {{
   {1, 2, 3, 4, 5},   // Arm 1
